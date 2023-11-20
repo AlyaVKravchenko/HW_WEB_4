@@ -1,10 +1,10 @@
+import json
 import mimetypes
 import urllib.parse
 import socket
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
-from json_handler import server as json_server
 import time
 
 BASE_DIR = Path()
@@ -27,6 +27,7 @@ def socket_send_message(message):
     finally:
         client_socket.shutdown(socket.SHUT_RDWR)
         client_socket.close()
+
 
 class HttpGetHandler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -75,6 +76,47 @@ class HttpGetHandler(BaseHTTPRequestHandler):
             self.wfile.write(file.read())
 
 
+def save_data_to_json(data):
+    data_parse = urllib.parse.unquote_plus(data)
+    data_parse = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
+    data_parse['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S.%f", time.localtime())
+
+    with open(BASE_DIR.joinpath('storage/data.json'), 'r', encoding='utf-8') as existing_file:
+        try:
+            existing_data = json.load(existing_file)
+        except json.decoder.JSONDecodeError:
+            existing_data = {}
+
+    existing_data[data_parse['timestamp']] = {
+        "username": data_parse['username'],
+        "message": data_parse['message']
+    }
+
+    with open(BASE_DIR.joinpath('storage/data.json'), 'w', encoding='utf-8') as fd:
+        json.dump(existing_data, fd, ensure_ascii=False, indent=2)
+
+
+def socket_server():
+    print("Json server started")
+    host = socket.gethostname()
+    port = 5000
+
+    while True:
+        server_socket = socket.socket()
+        server_socket.bind((host, port))
+        server_socket.listen()
+        conn, address = server_socket.accept()
+        print(f'Connection from {address}')
+
+        try:
+            data = conn.recv(100).decode()
+            if not data:
+                break
+            save_data_to_json(data)
+        finally:
+            conn.close()
+
+
 def run_http_server(server_class=HTTPServer, handler_class=HttpGetHandler):
 
     server_address = ("", 3000)
@@ -88,7 +130,7 @@ def run_http_server(server_class=HTTPServer, handler_class=HttpGetHandler):
 
 
 if __name__ == '__main__':
-    json_handler = Thread(target=json_server)
+    json_handler = Thread(target=socket_server)
     json_handler.start()
     print("Start server")
     run_http_server()
