@@ -38,8 +38,7 @@ class HttpGetHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.flush()
         time.sleep(0.1)
-        self.connection.shutdown(socket.SHUT_WR)
-        self.connection.close()
+
 
     def do_GET(self):
         route = urllib.parse.urlparse(self.path)
