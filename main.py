@@ -8,7 +8,7 @@ from threading import Thread
 import time
 
 BASE_DIR = Path()
-
+IP = "127.0.0.1"
 
 def socket_send_message(message):
     host = socket.gethostname()
@@ -118,8 +118,7 @@ def socket_server():
 
 
 def run_http_server(server_class=HTTPServer, handler_class=HttpGetHandler):
-
-    server_address = ("", 3000)
+    server_address = (IP, 3000)
     http = server_class(server_address, handler_class)
     try:
         http.serve_forever()
